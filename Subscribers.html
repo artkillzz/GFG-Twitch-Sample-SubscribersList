@@ -1,0 +1,79 @@
+<html>
+  <head>
+		<meta charset="utf-8">
+		<title>Subscribers List</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+		<script src="https://raw.github.com/justintv/twitch-js-sdk/master/twitch.js"></script>
+		<script>
+			window.CLIENT_ID = '';
+			window.UPDATE_LENGTH = '';
+			/*
+				client_id = your twitch app's client_id
+				update_length = interval to check twitch for new subscribers (in seconds)
+				Set your twitch app's redirect_uri to the page you're hosting and using this in for the callback
+			*/
+			$(function() {
+				Twitch.init({clientId: CLIENT_ID}, function(error, status) {
+					if (status.authenticated) {
+						$(".authenticated").removeClass('hidden');
+						get_list();
+						setInterval(get_list, UPDATE_LENGTH*1000);
+					} else {
+						$(".authenticate").removeClass('hidden');
+					}
+				});
+				$(".twitch-connect").click(function() {
+					Twitch.login({
+					  scope: ['channel_subscriptions', 'user_read']
+					});
+				})
+				$("#logout button").click(function() {
+					Twitch.logout();
+					window.location = window.location.pathname;
+				  })	  
+			});
+			function get_list() {
+				Twitch.api({method: 'user'}, function(err, user) {
+					if (err) { $("#subscribers").html('Error : ' + err); }
+					if (user.name) {		
+						var token = Twitch.getToken();
+						var bypassurl = 'https://api.twitch.tv/kraken/channels/' + user.name + '/subscriptions?callback=?&limit=10&direction=desc&oauth_token=' + token
+						$.getJSON(bypassurl, function (data) {					
+							if (data != "") {
+								$("#subscribers").html('');
+								$("#total").html('<strong>Subscriber Total: ' + data._total + '</strong><br>');				
+								$.each(data.subscriptions, function (key, object) {
+									$.each(object.user, function (key2, object2) {
+										if (key2 == 'name') {
+											$("#subscribers").append('<strong>' + object2 + '</strong><br>');
+										}
+									});
+								});
+							} 
+						});
+					}	
+				});
+			}	
+		</script>
+		<style type="text/css">
+			.hidden {
+				display: none;
+			}
+			body {
+				background-color: #00ff00;
+				color: #FFFFFF;
+				font-size: 35;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="authenticate hidden">
+			<img src="http://ttv-api.s3.amazonaws.com/assets/connect_dark.png" class="twitch-connect" href="#" />
+		</div>
+		<div class="authenticated hidden">
+			<div id="total"></div>
+			<div id="subscribers"></div>
+			<div id="logout"><button>Log Out</button></div>
+		</div>
+	</body>
+</html>
